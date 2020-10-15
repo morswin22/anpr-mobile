@@ -1,0 +1,10 @@
+{
+  "name": "Automatic Number-Plate Recognition",
+  "short_name": "ANPR",
+  "theme_color": "#2a81ad",
+  "background_color": "#e5e5e5",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/"
+}
