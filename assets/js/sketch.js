@@ -1,8 +1,17 @@
+const RECORDING_START_TIMEOUT = 250;
 const captures = [];
 let captureID;
+let captureStart;
+let recordStartTimeout;
+let isRecording = false;
+let stream = [];
+let streamI;
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
+  const canvas = createCanvas(windowWidth, windowHeight);
+  canvas.elt.addEventListener('click', () => {
+    stream = [];
+  });
 
   navigator.mediaDevices.enumerateDevices().then(deviceInfos => {
     let i = 0;
@@ -25,6 +34,28 @@ function setup() {
     }
     if (captures.length) captureID = 0;
   });
+
+  captureButton.addEventListener('mousedown', () => {
+    photo = undefined;
+    captureStart = Date.now();
+    recordStartTimeout = setTimeout(() => {
+      isRecording = true;
+      stream = [];
+      streamI = 0;
+    }, RECORDING_START_TIMEOUT);
+  });
+  captureButton.addEventListener('mouseup', () => {
+    isRecording = false;
+    const stop = Date.now();
+    const duration = stop - captureStart;
+    if (duration <= RECORDING_START_TIMEOUT) {
+      clearTimeout(recordStartTimeout);
+      if (captureID !== undefined) {
+        stream = [captures[captureID].get()];
+        streamI = 0;
+      }
+    }
+  });
 }
 
 function windowResized() {
@@ -32,27 +63,36 @@ function windowResized() {
 }
 
 function draw() {
-  if (captureID === undefined) return;
-  const capture = captures[captureID]
-
   background(229);
+  let canvas;
+
+  if (captureID === undefined) return;
+  if (stream.length && !isRecording) {
+    canvas = stream[streamI]
+    streamI += 1;
+    if (streamI == stream.length) streamI = 0;
+  } else {
+    canvas = captures[captureID]
+  }
 
   let width, height;
-  if (capture.width >= capture.height) {
+  if (canvas.width >= canvas.height) {
     width = windowWidth;
-    height = width * capture.height/capture.width
+    height = width * canvas.height/canvas.width
     if (height > windowHeight) {
       height = windowHeight;
-      width = height * capture.width/capture.height;
+      width = height * canvas.width/canvas.height;
     }
   } else {
     height = windowHeight;
-    width = height * capture.width/capture.height;
+    width = height * canvas.width/canvas.height;
     if (width > windowWidth) {
       width = windowWidth;
-      height = width * capture.height/capture.width;
+      height = width * canvas.height/canvas.width;
     }
   }
   
-  image(capture, (windowWidth - width) / 2, (windowHeight - height) / 2, width, height);
+  const snap = canvas.get();
+  if (isRecording) stream.push(snap);
+  image(snap, (windowWidth - width) / 2, (windowHeight - height) / 2, width, height);
 }
