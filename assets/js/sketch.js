@@ -35,7 +35,7 @@ function setup() {
     if (captures.length) captureID = 0;
   });
 
-  captureButton.addEventListener('mousedown', () => {
+  const onTouchStart = () => {
     photo = undefined;
     captureStart = Date.now();
     recordStartTimeout = setTimeout(() => {
@@ -43,8 +43,8 @@ function setup() {
       stream = [];
       streamI = 0;
     }, RECORDING_START_TIMEOUT);
-  });
-  captureButton.addEventListener('mouseup', () => {
+  };
+  const onTouchEnd = () => {
     isRecording = false;
     const stop = Date.now();
     const duration = stop - captureStart;
@@ -55,7 +55,11 @@ function setup() {
         streamI = 0;
       }
     }
-  });
+  };
+  captureButton.addEventListener('mousedown', onTouchStart);
+  captureButton.addEventListener('touchstart', onTouchStart);
+  captureButton.addEventListener('mouseup', onTouchEnd);
+  captureButton.addEventListener('touchend', onTouchEnd);
 }
 
 function windowResized() {
