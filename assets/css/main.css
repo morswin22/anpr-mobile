@@ -4,3 +4,6 @@ html, body {
   overflow: hidden;
 }
 
+#capturesList {
+  position: absolute;
+}
