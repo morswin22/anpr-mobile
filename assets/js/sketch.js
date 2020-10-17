@@ -6,12 +6,46 @@ let recordStartTimeout;
 let isRecording = false;
 let stream = [];
 let streamI;
+let model;
+let mapped;
+let output = [];
+
+const decoder = output => {
+  let label = '';
+  let offset = 0;
+  for (const letters of mapped) {
+    const slice = output.slice(offset, offset+letters.length);
+    const index = slice.indexOf(max(slice));
+    label += letters[index];
+    offset += letters.length;
+  }
+  return label
+}
+
+const predict = () => {
+  output = [];
+  let buffer = tf.tensor([]);
+  const divider = tf.scalar(255);
+  for (const frame of stream) {
+    const copy = frame.get();
+    copy.resize(128, 64);
+    buffer = tf.tidy(() => buffer.concat(tf.browser.fromPixels(copy.canvas).mean(2).toFloat().expandDims(-1).div(divider).reshape([1, 128, 64, 1])));
+  }
+  const predictions = model.predict(buffer);
+  predictions.array().then(response => response.forEach(prediction => {
+    console.log(decoder(prediction));
+  }));
+}
 
 function setup() {
   const canvas = createCanvas(windowWidth, windowHeight);
   canvas.elt.addEventListener('click', () => {
     stream = [];
+    output = [];
   });
+
+  tf.loadLayersModel('/assets/anpr/model.json').then(m => model = m);
+  fetch('/assets/anpr/map.json').then(response => response.json()).then(data => mapped = data);
 
   navigator.mediaDevices.enumerateDevices().then(deviceInfos => {
     let i = 0;
@@ -36,11 +70,13 @@ function setup() {
   });
 
   const onTouchStart = () => {
-    photo = undefined;
+    stream = [];
+    output = [];
     captureStart = Date.now();
     recordStartTimeout = setTimeout(() => {
       isRecording = true;
       stream = [];
+      output = [];
       streamI = 0;
     }, RECORDING_START_TIMEOUT);
   };
@@ -55,6 +91,7 @@ function setup() {
         streamI = 0;
       }
     }
+    predict();
   };
   captureButton.addEventListener('mousedown', onTouchStart);
   captureButton.addEventListener('touchstart', onTouchStart);
@@ -99,4 +136,8 @@ function draw() {
   const snap = canvas.get();
   if (isRecording) stream.push(snap);
   image(snap, (windowWidth - width) / 2, (windowHeight - height) / 2, width, height);
+
+  if (output.length > streamI) {
+    console.log(output[streamI]);
+  }
 }
