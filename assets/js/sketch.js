@@ -1,108 +1,12 @@
-const RECORDING_START_TIMEOUT = 250;
-const ZOOM_MULT = 2 ** (1/2);
-const RATIO = 128 / 64;
-const SLIDE_STEP = 8 / 128;
-const EVERY_N_FRAME = 5;
+const click_timeout = 250;
 const captures = [];
 let captureID;
 let captureStart;
-let recordStartTimeout;
 let isRecording = false;
 let stream = [];
 let streamI;
-let model;
-let mapped;
 let output = [];
-
-const decoder = output => {
-  let label = '';
-  let offset = 0;
-  for (const letters of mapped) {
-    const sliced = output.slice(offset, letters.length);
-    const index = sliced.argMax().arraySync();
-    label += letters[index];
-    offset += letters.length;
-  }
-  return label
-}
-
-const predict = () => {
-  const start = Date.now();
-  let last = start;
-  let timesSum = 0;
-
-  output = [];
-  const divider = tf.scalar(255);
-  const filteredStream = stream.filter((_, i) => !(i % EVERY_N_FRAME));
-
-  for (const index in filteredStream) {
-    const frame = filteredStream[index];
-    let buffer = tf.tensor([]);
-    const out = [];
-    const w = frame.width, h = frame.height;
-    let width, height;
-
-    if (w / h < RATIO) {
-      width = w;
-      height = width / RATIO;
-    } else {
-      height = h;
-      width = height * RATIO;
-    }
-    width = floor(width)
-    height = floor(height);
-
-    let zoom = 1;
-    const max_zoom = 2 ** (1/2);
-    while (zoom <= max_zoom) {
-      const scaled_w = floor(w * zoom), scaled_h = floor(h * zoom);
-
-      const overflow_x = abs(width - scaled_w), overflow_y = abs(height - scaled_h);
-      const coeff = w / scaled_w;
-
-      const copied = frame.get();
-
-      const step = floor(SLIDE_STEP * scaled_w);
-      for (let i = 0; i <= overflow_x; i += step) {
-        for (let j = 0; j <= overflow_y; j += step) {
-          out.push([[floor(i * coeff), floor(j * coeff)], [floor(width * coeff), floor(height * coeff)]]);
-          const sliced = copied.get(i, j, width, height);
-          sliced.resize(128, 64);
-          buffer = tf.tidy(() => buffer.concat(tf.browser.fromPixels(sliced.canvas).mean(2).toFloat().expandDims(-1).div(divider).reshape([1, 128, 64, 1])));
-        }
-      }
-      zoom *= ZOOM_MULT;
-    }
-
-    const predictions = model.predict(buffer);
-    for (let i = 0; i < predictions.shape[0]; i++) {
-      const label = tf.tidy(() => {
-        const prediction = predictions.gather([i]).reshape([predictions.shape[1]]);
-        const isPlate = prediction.slice(0, 2).argMax().arraySync();
-        return isPlate ? decoder(prediction) : null;
-      });
-      if (label) {
-        out[i] = [out[i], label];
-      } else {
-        out[i] = null;
-      }
-    }
-    // TODO Add output processing
-    output.push(out.filter(bbox => bbox));
-
-    buffer.dispose();
-    predictions.dispose();
-
-    const now = Date.now();
-    timesSum += now - last;
-    last = now;
-    const next = Number(index) + 1;
-    const took = floor((now - start) / 1000);
-    const willTake = floor((timesSum / next) * (filteredStream.length - next) / 1000);
-    console.log(`${nf(floor(next/filteredStream.length*100), 1, 0)}% | ${next}/${filteredStream.length} | [${nf(floor(took / 60), 2, 0)}:${nf(took % 60, 2, 0)}<${nf(floor(willTake / 60), 2, 0)}:${nf(willTake % 60, 2, 0)}, ${floor(timesSum / next)}ms/frame]`);
-    console.log(`Found ${output[index].length}`);
-  }
-}
+let worker;
 
 function setup() {
   const canvas = createCanvas(windowWidth, windowHeight);
@@ -111,8 +15,17 @@ function setup() {
     output = [];
   });
 
-  tf.loadLayersModel('/assets/anpr/model.json').then(m => model = m);
-  fetch('/assets/anpr/map.json').then(response => response.json()).then(data => mapped = data);
+  worker = new Worker('/assets/js/worker.js');
+  worker.onmessage = ({ data: { type, content } }) => {
+    if (type === 'status') {
+      console.log(`${nf(content.percent, 1, 0)}% | ${content.done}/${content.toDo} | [${nf(content.took[0], 2, 0)}:${nf(content.took[1], 2, 0)}<${nf(content.willTake[0], 2, 0)}:${nf(content.willTake[0], 2, 0)}, ${content.average}ms/frame]`);
+      console.log(`Found ${content.found}`);
+    } else if (type === 'result') {
+      output = content.output;
+    } else if (type === 'ready') {
+      console.log(content ? 'Worker is ready' : 'Worker is not ready');
+    }
+  }
 
   navigator.mediaDevices.enumerateDevices().then(deviceInfos => {
     let i = 0;
@@ -138,28 +51,36 @@ function setup() {
 
   const onTouchStart = () => {
     stream = [];
+    streamI = 0;
     output = [];
     captureStart = Date.now();
-    recordStartTimeout = setTimeout(() => {
-      isRecording = true;
-      stream = [];
-      output = [];
-      streamI = 0;
-    }, RECORDING_START_TIMEOUT);
+    isRecording = true;
   };
-  const onTouchEnd = () => {
+
+  const onTouchEnd = async () => {
     isRecording = false;
     const stop = Date.now();
     const duration = stop - captureStart;
-    if (duration <= RECORDING_START_TIMEOUT) {
-      clearTimeout(recordStartTimeout);
+    if (duration <= click_timeout) {
       if (captureID !== undefined) {
         stream = [captures[captureID].get()];
         streamI = 0;
       }
     }
-    predict();
+
+    const imageBitmaps = [];
+    for (const frame of stream) {
+      imageBitmaps.push(await createImageBitmap(frame.canvas, 0, 0, frame.width, frame.height));
+    }
+
+    worker.postMessage({
+      type: 'arguments',
+      content: {
+        stream: imageBitmaps,
+      }
+    });
   };
+
   captureButton.addEventListener('mousedown', onTouchStart);
   captureButton.addEventListener('touchstart', onTouchStart);
   captureButton.addEventListener('mouseup', onTouchEnd);
@@ -207,9 +128,9 @@ function draw() {
   if (isRecording) stream.push(snap);
   image(snap, offsetX, offsetY, width, height);
 
-  if (output.length > streamI) {
+  if (output.length*5 > streamI) { // because EVERY_N_FRAME = 5
     const coeff = width / snap.width;
-    const results = output[streamI];
+    const results = output[floor(streamI/5)];
     noFill();
     stroke(0, 255, 0);
     for (const result of results) {
