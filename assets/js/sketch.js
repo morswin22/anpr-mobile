@@ -1,4 +1,5 @@
-const click_timeout = 250;
+const clickTimeout = 250;
+const skipEvery = 5;
 const captures = [];
 let captureID;
 let captureStart;
@@ -18,7 +19,7 @@ function setup() {
   worker = new Worker('/assets/js/worker.js');
   worker.onmessage = ({ data: { type, content } }) => {
     if (type === 'status') {
-      console.log(`${nf(content.percent, 1, 0)}% | ${content.done}/${content.toDo} | [${nf(content.took[0], 2, 0)}:${nf(content.took[1], 2, 0)}<${nf(content.willTake[0], 2, 0)}:${nf(content.willTake[0], 2, 0)}, ${content.average}ms/frame]`);
+      console.log(`${nf(content.percent, 1, 0)}% | ${content.done}/${content.toDo} | [${nf(content.took[0], 2, 0)}:${nf(content.took[1], 2, 0)}<${nf(content.willTake[0], 2, 0)}:${nf(content.willTake[1], 2, 0)}, ${content.average}ms/frame]`);
       console.log(`Found ${content.found}`);
     } else if (type === 'result') {
       output = content.output;
@@ -61,7 +62,7 @@ function setup() {
     isRecording = false;
     const stop = Date.now();
     const duration = stop - captureStart;
-    if (duration <= click_timeout) {
+    if (duration <= clickTimeout) {
       if (captureID !== undefined) {
         stream = [captures[captureID].get()];
         streamI = 0;
@@ -69,7 +70,7 @@ function setup() {
     }
 
     const imageBitmaps = [];
-    for (const frame of stream) {
+    for (const frame of stream.filter((_, i) => !(i % skipEvery))) {
       imageBitmaps.push(await createImageBitmap(frame.canvas, 0, 0, frame.width, frame.height));
     }
 
@@ -77,6 +78,8 @@ function setup() {
       type: 'arguments',
       content: {
         stream: imageBitmaps,
+        slideStep: 8,
+        maxZoomExp: 1,
       }
     });
   };
@@ -128,9 +131,9 @@ function draw() {
   if (isRecording) stream.push(snap);
   image(snap, offsetX, offsetY, width, height);
 
-  if (output.length*5 > streamI) { // because EVERY_N_FRAME = 5
+  if (output.length*skipEvery > streamI) {
     const coeff = width / snap.width;
-    const results = output[floor(streamI/5)];
+    const results = output[floor(streamI/skipEvery)];
     noFill();
     stroke(0, 255, 0);
     for (const result of results) {

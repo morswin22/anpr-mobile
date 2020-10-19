@@ -3,8 +3,6 @@ importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.6.0/dist/tf.min.j
 (async () => {
   const ZOOM_MULT = 2 ** (1/2);
   const RATIO = 128 / 64;
-  const SLIDE_STEP = 8 / 128;
-  const EVERY_N_FRAME = 5;
 
   const model = await tf.loadLayersModel('/assets/anpr/model.json');
   const mapped = await (await fetch('/assets/anpr/map.json')).json();
@@ -21,17 +19,16 @@ importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.6.0/dist/tf.min.j
     return label
   }
 
-  const predict = async stream => { // TODO Do not use async
+  const predict = async ({ stream, slideStep, maxZoomExp }) => { // TODO Do not use async
     const start = Date.now();
     let last = start;
     let timesSum = 0;
 
     const output = [];
     const divider = tf.scalar(255);
-    const filteredStream = stream.filter((_, i) => !(i % EVERY_N_FRAME));
 
-    for (const index in filteredStream) {
-      const frame = filteredStream[index];
+    for (const index in stream) {
+      const frame = stream[index];
       const buffer = [];
       const out = [];
       const w = frame.width, h = frame.height;
@@ -48,7 +45,7 @@ importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.6.0/dist/tf.min.j
       height = Math.floor(height);
 
       let zoom = 1;
-      const max_zoom = 2 ** (1/2);
+      const max_zoom = 2 ** (maxZoomExp/2);
       while (zoom <= max_zoom) {
         const scaled_w = Math.floor(w * zoom), scaled_h = Math.floor(h * zoom);
 
@@ -60,7 +57,7 @@ importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.6.0/dist/tf.min.j
         copiedContext.scale(zoom, zoom);
         copiedContext.drawImage(frame, 0, 0);
 
-        const step = Math.floor(SLIDE_STEP * scaled_w);
+        const step = Math.floor(slideStep / 128 * scaled_w);
         for (let i = 0; i <= overflow_x; i += step) {
           for (let j = 0; j <= overflow_y; j += step) {
             out.push([[Math.floor(i * coeff), Math.floor(j * coeff)], [Math.floor(width * coeff), Math.floor(height * coeff)]]);
@@ -101,13 +98,13 @@ importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.6.0/dist/tf.min.j
       last = now;
       const next = Number(index) + 1;
       const took = Math.floor((now - start) / 1000);
-      const willTake = Math.floor((timesSum / next) * (filteredStream.length - next) / 1000);
+      const willTake = Math.floor((timesSum / next) * (stream.length - next) / 1000);
       postMessage({
         type: 'status',
         content: {
-          percent: Math.floor(next/filteredStream.length*100),
+          percent: Math.floor(next/stream.length*100),
           done: next,
-          toDo: filteredStream.length,
+          toDo: stream.length,
           took: [Math.floor(took / 60), took % 60],
           willTake: [Math.floor(willTake / 60), willTake % 60],
           average: Math.floor(timesSum / next),
@@ -119,10 +116,9 @@ importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.6.0/dist/tf.min.j
     return output;
   }
 
-  onmessage = event => {
-    if (event.data.type === 'arguments') {
-      const { stream } = event.data.content;
-      predict(stream).then(output => {
+  onmessage = ({ data: { type, content } }) => {
+    if (type === 'arguments') {
+      predict(content).then(output => {
         postMessage({
           type: 'result',
           content: {
