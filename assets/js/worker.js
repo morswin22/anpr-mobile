@@ -19,6 +19,17 @@ importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.6.0/dist/tf.min.j
     return label
   }
 
+  const getPossibleLabel = (current, nextChars, labels) => {
+    if (nextChars.length > 0) {
+      for (const char of nextChars[0]) {
+        getPossibleLabel(current+char, nextChars.slice(1), labels);
+      }
+      return labels;
+    } else {
+      labels.push(current);
+    }
+  }
+
   const predict = async ({ stream, slideStep, maxZoomExp }) => { // TODO Do not use async
     const start = Date.now();
     let last = start;
@@ -85,13 +96,109 @@ importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.6.0/dist/tf.min.j
           out[i] = null;
         }
       }
-      // TODO Add output processing
-      output.push(out.filter(bbox => bbox));
+      const valid = out.filter(bbox => bbox);
 
       for (const tensor of buffer) {
         tensor.dispose();
       }
       predictions.dispose();
+
+      const groups = [];
+      for (let i = 0; i < valid.length; i++) {
+        for (let j = i + 1; j < valid.length; j++) {
+          const [bbox0, bbox1] = [valid[i][0], valid[j][0]];
+          const areOverlapping = Math.max(bbox0[0][0], bbox1[0][0]) < Math.min(bbox0[0][0]+bbox0[1][0], bbox1[0][0]+bbox1[1][0]) && Math.max(bbox0[0][1], bbox1[0][1]) < Math.min(bbox0[0][1]+bbox0[1][1], bbox1[0][1]+bbox1[1][1]);
+          if (areOverlapping) {
+            let appended = false;
+            for (const group of groups) {
+              if (!group.find(item => item === i)) {
+                group.push(i);
+                appended = true;
+              }
+              if (!group.find(item => item === j)) {
+                group.push(j);
+                appended = true;
+              }
+            }
+            if (!appended) {
+              groups.push([i, j]);
+            }
+          }
+        }
+      }
+
+      for (let i = 0; i < valid.length; i++) {
+        let isInGroup = false;
+        for (const group of groups) {
+          if (group.find(item => item === i)) {
+            isInGroup = true;
+            break;
+          }
+        }
+        if (!isInGroup) {
+          groups.push([i]);
+        }
+      }
+
+      const grouped = [];
+      for (const group of groups) {
+        const length = group.length;
+        if (length === 1) {
+          console.log('Unsure about group with a weak match: ' + valid[group[0]]);
+          continue;
+        }
+        
+        let top = 0, height = 0, left = 0, width = 0;
+        const letters = [[], [], [], [], [], [], [], [], [], [], []];
+        for (const index of group) {
+          left += valid[index][0][0][0];
+          width += valid[index][0][1][0];
+          top += valid[index][0][0][1];
+          height += valid[index][0][1][1];
+          for (const i in valid[index][1]) {
+            letters[i].push(valid[index][1][i]);
+          }
+        }
+
+        const maxProbs = [];
+        for (const letter of letters) {
+          const counter = {};
+          for (const possibleLetter of letter) {
+            if (counter[possibleLetter] === undefined) {
+              counter[possibleLetter] = 1;
+            } else {
+              counter[possibleLetter] += 1;
+            }
+          }
+          const sorted = Object.entries(counter).sort((a, b) => b[1] - a[1]);
+          const maxProb = sorted[0][1];
+          const withMaxProb = [];
+          for (const pair of sorted) {
+            if (pair[1] === maxProb) {
+              withMaxProb.push(pair[0]);
+            } else if (pair[1] < maxProb) {
+              break;
+            }
+          }
+          maxProbs.push(withMaxProb);
+        }
+
+        const possible = getPossibleLabel('', maxProbs, []);
+        if (possible.length >= Math.floor(length / 2)) {
+          console.log('Unsure about group with labels: ' + possible);
+          grouped.push([[[left/length, top/length],[width/length, height/length]], null, 1]);
+        } else {
+          const label = possible.join();
+          const textWidth = width/length;
+          const fontSize = 1;
+          const isTooLong = false;
+
+          // TODO test font sizes
+          
+          grouped.push([[[left/length,top/length],[textWidth,height/length]], isTooLong ? '' : label, fontSize]);
+        }
+      }
+      output.push(grouped);
 
       const now = Date.now();
       timesSum += now - last;

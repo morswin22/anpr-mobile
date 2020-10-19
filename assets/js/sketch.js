@@ -137,12 +137,12 @@ function draw() {
     noFill();
     stroke(0, 255, 0);
     for (const result of results) {
-      const [bbox, label] = result;
+      const [bbox, label, fontSize] = result;
       const left = offsetX + bbox[0][0] * coeff;
       const top = offsetY + bbox[0][1] * coeff;
       const width = bbox[1][0] * coeff;
       const height = bbox[1][1] * coeff;
-      text(label, left, top, width, height);
+      if (label) text(label, left, top, width, height);
       rect(left, top, width, height);
     }
   }
