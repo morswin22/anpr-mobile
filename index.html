@@ -14,6 +14,13 @@
   <ul id="capturesList"></ul>
   <div id="captureButton"></div>
 
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js');
+      });
+    }
+  </script>
   <script src="assets/js/sketch.js"></script>
 </body>
 </html>
