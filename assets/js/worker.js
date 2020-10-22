@@ -1,10 +1,21 @@
 importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.6.0/dist/tf.min.js');
 
-(async () => {
+const main = async () => {
   const ZOOM_MULT = 2 ** (1/2);
   const RATIO = 128 / 64;
 
-  const model = await tf.loadLayersModel('/assets/anpr/model.json');
+  const startedDownload = Date.now();
+  const model = await tf.loadLayersModel('/assets/anpr/model.json', {
+    onProgress(percentDownloaded) {
+      postMessage({
+        type: 'loading',
+        content: {
+          percentDownloaded,
+          willFinishIn: (Date.now() - startedDownload) / percentDownloaded,
+        }
+      });
+    }
+  });
   const mapped = await (await fetch('/assets/anpr/map.json')).json();
 
   const decoder = output => {
@@ -240,5 +251,14 @@ importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.6.0/dist/tf.min.j
     type: 'ready',
     content: true,
   });
+};
 
-})();
+try {
+  main();
+} catch(e) {
+  postMessage({
+    type: 'ready',
+    content: false,
+  });
+  console.error(e);
+}
