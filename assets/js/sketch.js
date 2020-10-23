@@ -1,6 +1,7 @@
 const clickTimeout = 250;
 const skipEvery = 5;
 const captures = [];
+let debug = false;
 let drawFunction = drawLoading;
 let captureID;
 let captureStart;
@@ -12,16 +13,23 @@ let worker;
 let percentDownloaded = 0;
 let timeLeft = 0;
 let timeReceived = 0;
+let status;
+let lastAverage = 0;
 
 const getWorker = path => {
   worker = new Worker(path);
   worker.onmessage = ({ data: { type, content } }) => {
     if (type === 'status') {
-      // TODO Add status display
-      console.log(`${nf(content.percent, 1, 0)}% | ${content.done}/${content.toDo} | [${nf(content.took[0], 2, 0)}:${nf(content.took[1], 2, 0)}<${nf(content.willTake[0], 2, 0)}:${nf(content.willTake[1], 2, 0)}, ${content.average}ms/frame]`);
-      console.log(`Found ${content.found}`);
+      status = content;
+      lastAverage = status.average / 1000;
+      drawStatus();
+      if (debug) {
+        console.log(`${nf(status.percent, 1, 0)}% | ${status.done}/${status.toDo} | [${nf(status.took[0], 2, 0)}:${nf(status.took[1], 2, 0)}<${nf(status.willTake[0], 2, 0)}:${nf(status.willTake[1], 2, 0)}, ${status.average}ms/frame]`);
+        console.log(`Found ${status.found}`);
+      }
     } else if (type === 'result') {
       output = content.output;
+      drawFunction = drawOutput;
     } else if (type === 'loading') {
       percentDownloaded = content.percentDownloaded;
       timeReceived = Date.now();
@@ -85,6 +93,19 @@ const buttonPressEnd = async () => {
   for (const frame of stream.filter((_, i) => !(i % skipEvery))) {
     imageBitmaps.push(await createImageBitmap(frame.canvas, 0, 0, frame.width, frame.height));
   }
+
+  const willTake = floor(lastAverage * imageBitmaps.length);
+  status = {
+    percent: 0,
+    done: 0,
+    toDo: imageBitmaps.length,
+    took: [0, 0],
+    willTake: [floor(willTake / 60), willTake % 60],
+    average: 0,
+    found: 0,
+  };
+  drawStatus();
+  drawFunction = drawStatus;
 
   worker.postMessage({
     type: 'arguments',
@@ -156,6 +177,23 @@ function drawLoading() {
 
 function drawError() {
   // TODO Add error display
+}
+
+function drawStatus() {
+  // TODO Add realtime support
+  const smaller = min(windowWidth, windowHeight);
+  
+  stroke(250, 200, 35);
+  strokeWeight(0.02*smaller);
+  noFill();
+  arc(windowWidth*0.5, windowHeight*0.5, smaller * 0.5, smaller * 0.5, -PI/2, -PI/2 + (status.done/status.toDo)*TAU);
+
+  noStroke()
+  fill(0);
+  textFont('Helvetica');
+  textSize(map(smaller, 200, 1000, 12, 28));
+  textAlign(CENTER, CENTER);
+  text(`${status.done}/${status.toDo}\n${nf(status.took[0], 2, 0)}:${nf(status.took[1], 2, 0)} < ${nf(status.willTake[0], 2, 0)}:${nf(status.willTake[1], 2, 0)}`, windowWidth*0.5, windowHeight*0.5);
 }
 
 function drawOutput() {
