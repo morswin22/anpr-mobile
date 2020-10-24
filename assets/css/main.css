@@ -2,15 +2,81 @@ html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  font-family: 'Helvetica', sans-serif;
 }
 
 #capturesList {
+  margin: 0;
+  padding: 0;
   position: absolute;
-  color: #FAC823;
+  color: #000000;
   user-select: none;
+  min-width: min(25vh, 25vw);
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #FAC823;
+  list-style: none;
+}
+
+#capturesList li {
+  padding: 20px;
+  border-bottom: 2px solid #BA951A;
+}
+
+#capturesList li:last-of-type {
+  border: 0;
+}
+
+#capturesList li:hover {
+  background-color: #E0B31F;
+  cursor: pointer;
+}
+
+#capturesListButton {
+  cursor: pointer;
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  bottom: 40px;
+  left: 50%;
+  transform: translate(calc(-50% + 90px), 0);
+}
+
+#capturesListButton > div {
+  position: absolute;
+  width: 40px;
+  height: 5px;
+  border-radius: 5px;
+  background-color: #E0B31F;
+  left: 50%;
+  top: 17px;
+  transform: translate(calc(-50%), 0);
+}
+
+#capturesListButton > div::before,
+#capturesListButton > div::after {
+  content: '';
+  position: absolute;
+  width: 40px;
+  height: 5px;
+  top: 50%;
+  left: 50%;
+  display: block;
+  border-radius: 5px;
+  background-color: #E0B31F;
+}
+
+#capturesListButton > div::before {
+  transform: translate(calc(-50%), -17px);
+}
+
+#capturesListButton > div::after {
+  transform: translate(calc(-50%), 11px);
 }
 
 #captureButton {
+  cursor: pointer;
   position: absolute;
   width: 60px;
   height: 60px;
@@ -19,19 +85,7 @@ html, body {
   transform: translate(-50%, 0);
 }
 
-#captureButton::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: block;
-  width: 60px;
-  height: 60px;
-  border: 6px solid #FAC823;
-  border-radius: 50%;
-}
-
+#captureButton::before,
 #captureButton::after {
   content: '';
   position: absolute;
@@ -39,8 +93,17 @@ html, body {
   left: 50%;
   transform: translate(-50%, -50%);
   display: block;
+  border-radius: 50%;
+}
+
+#captureButton::before {
+  width: 60px;
+  height: 60px;
+  border: 6px solid #FAC823;
+}
+
+#captureButton::after {
   width: 50px;
   height: 50px;
   background-color: #FAC823;
-  border-radius: 50%;
 }

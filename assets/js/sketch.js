@@ -11,6 +11,7 @@ let output = [];
 let worker;
 let percentDownloaded = 0;
 let timeLeft = 0;
+let timeReceived = 0;
 
 const getWorker = path => {
   worker = new Worker(path);
@@ -23,11 +24,12 @@ const getWorker = path => {
       output = content.output;
     } else if (type === 'loading') {
       percentDownloaded = content.percentDownloaded;
+      timeReceived = Date.now();
       timeLeft = floor(content.willFinishIn / 1000);
     } else if (type === 'ready') {
       if (content) {
         drawFunction = drawOutput;
-        captureButton.removeAttribute('style');
+        ui.removeAttribute('style');
       } else {
         drawFunction = drawError;
       }
@@ -65,6 +67,7 @@ const buttonPressStart = () => {
   output = [];
   captureStart = Date.now();
   isRecording = true;
+  capturesList.setAttribute('style', 'display: none;');
 }
 
 const buttonPressEnd = async () => {
@@ -96,6 +99,15 @@ const buttonPressEnd = async () => {
 const canvasPress = () => {
   stream = [];
   output = [];
+  capturesList.setAttribute('style', 'display: none;');
+};
+
+const capturesListToggle = () => {
+  if (capturesList.getAttribute('style') && !isRecording) {
+    capturesList.removeAttribute('style');
+  } else {
+    capturesList.setAttribute('style', 'display: none;');
+  }
 }
 
 function setup() {
@@ -109,6 +121,7 @@ function setup() {
   captureButton.addEventListener('touchstart', buttonPressStart);
   captureButton.addEventListener('mouseup', buttonPressEnd);
   captureButton.addEventListener('touchend', buttonPressEnd);
+  capturesListButton.addEventListener('click', capturesListToggle);
 }
 
 function windowResized() {
@@ -122,8 +135,9 @@ function draw() {
 
 function drawLoading() {
   let timeText = '';
-  if (timeLeft >= 60) timeText += `${floor(timeLeft / 60)}m `;
-  timeText += `${timeLeft % 60}s left`;
+  const realtimeLeft = max(timeLeft - floor((Date.now() - timeReceived) / 1000), 0);
+  if (realtimeLeft >= 60) timeText += `${floor(realtimeLeft / 60)}m `;
+  timeText += `${realtimeLeft % 60}s left`;
   
   const smaller = min(windowWidth, windowHeight);
   

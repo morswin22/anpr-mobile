@@ -11,8 +11,13 @@
 </head>
 <body>
 
-  <ul id="capturesList"></ul>
-  <div id="captureButton" style="display: none;"></div>
+  <div id="ui" style="display: none;">
+    <ul id="capturesList" style="display: none;"></ul>
+    <div id="captureButton"></div>
+    <div id="capturesListButton">
+      <div></div>
+    </div>
+  </div>
 
   <script>
     if ('serviceWorker' in navigator) {
@@ -22,5 +27,6 @@
     }
   </script>
   <script src="assets/js/sketch.js"></script>
+
 </body>
 </html>
