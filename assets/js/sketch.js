@@ -15,6 +15,11 @@ let timeLeft = 0;
 let timeReceived = 0;
 let status;
 let lastAverage = 0;
+let errorBubbles = [];
+const maxErrorBubbles = 13;
+const errorBubbleSizes = [20, 50];
+const errorBubbleDurations = [120, 720];
+const errorMessage = 'An error has occurred';
 
 const getWorker = path => {
   worker = new Worker(path);
@@ -51,7 +56,7 @@ const getDevices = () => {
     for (const info of deviceInfos) {
       if (info.kind == 'videoinput') {
         const li = document.createElement('li');
-        li.innerText = info.label;
+        li.innerText = info.label; // TODO Add default enumerator when empty
         li.setAttribute('data-id', i);
         li.addEventListener('click', e => {
           captureID = parseInt(e.target.getAttribute('data-id'));
@@ -135,6 +140,7 @@ function setup() {
   const canvas = createCanvas(windowWidth, windowHeight);
   canvas.elt.addEventListener('click', canvasPress);
 
+  textFont('Helvetica');
   getWorker('/assets/js/worker.js');
   getDevices();
 
@@ -169,14 +175,41 @@ function drawLoading() {
 
   noStroke()
   fill(0);
-  textFont('Helvetica');
   textSize(map(smaller, 200, 1000, 12, 28));
   textAlign(CENTER, CENTER);
   text("Loading\n"+timeText, windowWidth*0.5, windowHeight*0.5);
 }
 
 function drawError() {
-  // TODO Add error display
+  noStroke();
+  const errorBubbleColor = color(220, 0, 0);
+  for (let i = errorBubbles.length - 1; i >= 0; i--) {
+    const [x, y, size, drawn, total] = errorBubbles[i];
+    errorBubbleColor.setAlpha(255 * (-2 * abs((drawn/total) - 0.5) + 1));
+    fill(errorBubbleColor);
+    ellipse(x, y, size, size);
+    if (drawn + 1 < total) {
+      errorBubbles[i][3] += 1;
+    } else {
+      errorBubbles.splice(i, 1);
+    }
+  }
+  if (errorBubbles.length < maxErrorBubbles && random() < 0.2) {
+    errorBubbles.push([
+      random(errorBubbleSizes[0], windowWidth-errorBubbleSizes[1]), 
+      random(errorBubbleSizes[0], windowHeight-errorBubbleSizes[1]),
+      random(errorBubbleSizes[0], errorBubbleSizes[1]),
+      0,
+      random(errorBubbleDurations[0], errorBubbleDurations[1]),
+    ]);
+  }
+
+  for (i = 25; i > 9; i--) {
+    textSize(i);
+    if (textWidth(errorMessage) + 20 < windowWidth) break;
+  }
+  fill(0);
+  text(errorMessage, windowWidth*0.5, windowHeight*0.5);
 }
 
 function drawStatus() {
@@ -190,7 +223,6 @@ function drawStatus() {
 
   noStroke()
   fill(0);
-  textFont('Helvetica');
   textSize(map(smaller, 200, 1000, 12, 28));
   textAlign(CENTER, CENTER);
   text(`${status.done}/${status.toDo}\n${nf(status.took[0], 2, 0)}:${nf(status.took[1], 2, 0)} < ${nf(status.willTake[0], 2, 0)}:${nf(status.willTake[1], 2, 0)}`, windowWidth*0.5, windowHeight*0.5);

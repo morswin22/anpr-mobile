@@ -1,6 +1,6 @@
 importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.6.0/dist/tf.min.js');
 
-const main = async () => {
+(async () => {
   const ZOOM_MULT = 2 ** (1/2);
   const RATIO = 128 / 64;
 
@@ -251,14 +251,11 @@ const main = async () => {
     type: 'ready',
     content: true,
   });
-};
 
-try {
-  main();
-} catch(e) {
+})().catch((error) => {
   postMessage({
     type: 'ready',
     content: false,
   });
-  console.error(e);
-}
+  console.error(error);
+});
