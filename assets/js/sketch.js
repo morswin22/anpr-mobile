@@ -53,10 +53,11 @@ const getWorker = path => {
 const getDevices = () => {
   navigator.mediaDevices.enumerateDevices().then(deviceInfos => {
     let i = 0;
+    let humanIndex = 1;
     for (const info of deviceInfos) {
       if (info.kind == 'videoinput') {
         const li = document.createElement('li');
-        li.innerText = info.label; // TODO Add default enumerator when empty
+        li.innerText = info.label.trim() || `Camera ${humanIndex++}`;
         li.setAttribute('data-id', i);
         li.addEventListener('click', e => {
           captureID = parseInt(e.target.getAttribute('data-id'));
