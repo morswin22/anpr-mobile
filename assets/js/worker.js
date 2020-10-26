@@ -118,6 +118,7 @@ importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.6.0/dist/tf.min.j
       for (let i = 0; i < valid.length; i++) {
         for (let j = i + 1; j < valid.length; j++) {
           const [bbox0, bbox1] = [valid[i][0], valid[j][0]];
+          // TODO Fix overlapping check
           const areOverlapping = Math.max(bbox0[0][0], bbox1[0][0]) < Math.min(bbox0[0][0]+bbox0[1][0], bbox1[0][0]+bbox1[1][0]) && Math.max(bbox0[0][1], bbox1[0][1]) < Math.min(bbox0[0][1]+bbox0[1][1], bbox1[0][1]+bbox1[1][1]);
           if (areOverlapping) {
             let appended = false;
@@ -199,14 +200,7 @@ importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.6.0/dist/tf.min.j
           console.log('Unsure about group with labels: ' + possible);
           grouped.push([[[left/length, top/length],[width/length, height/length]], null, 1]);
         } else {
-          const label = possible.join();
-          const textWidth = width/length;
-          const fontSize = 1;
-          const isTooLong = false;
-
-          // TODO test font sizes
-          
-          grouped.push([[[left/length,top/length],[textWidth,height/length]], isTooLong ? '' : label, fontSize]);
+          grouped.push([[[left/length,top/length],[width/length,height/length]], possible.map(label => label.trim().slice(3)).join('/')]);
         }
       }
       output.push(grouped);

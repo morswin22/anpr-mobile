@@ -268,15 +268,46 @@ function drawOutput() {
   if (output.length*skipEvery > streamI) {
     const coeff = width / snap.width;
     const results = output[floor(streamI/skipEvery)];
-    noFill();
-    stroke(0, 255, 0);
+    strokeWeight(2);
     for (const result of results) {
-      const [bbox, label, fontSize] = result;
+      const bbox = result[0];
       const left = offsetX + bbox[0][0] * coeff;
       const top = offsetY + bbox[0][1] * coeff;
       const width = bbox[1][0] * coeff;
       const height = bbox[1][1] * coeff;
-      if (label) text(label, left, top, width, height);
+      if (result[3] === undefined) {
+        let broke = false;
+        let fontSize;
+        for (fontSize = 32; fontSize >= 14; fontSize -= 2) {
+          textSize(fontSize);
+          if (textWidth(result[1]) < width) {
+            broke = true;
+            break;
+          }
+        }
+        result[2] = fontSize;
+        if (!broke) {
+          let labelLength;
+          for (let i = 1; i < result[1].length; i++) {
+            if (textWidth(result[1].slice(0, i) + '…') < width) {
+              labelLength = i;
+            } else {
+              break;
+            }
+          }
+          result[1] = result[1].slice(0, labelLength) + '…';
+        }
+      }
+      const [, label, fontSize] = result;
+      if (label) {
+        noStroke();
+        fill(0, 255, 0);
+        textSize(fontSize);
+        textAlign(LEFT, TOP);
+        text(label, left, top);
+      } 
+      noFill();
+      stroke(0, 255, 0);
       rect(left, top, width, height);
     }
   }
