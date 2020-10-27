@@ -48,10 +48,10 @@ html, body {
   width: 40px;
   height: 5px;
   border-radius: 5px;
-  background-color: #E0B31F;
+  background-color: #FAC823;
   left: 50%;
   top: 17px;
-  transform: translate(calc(-50%), 0);
+  transform: translate(-50%, 0);
 }
 
 #capturesListButton > div::before,
@@ -64,7 +64,7 @@ html, body {
   left: 50%;
   display: block;
   border-radius: 5px;
-  background-color: #E0B31F;
+  background-color: #FAC823;
 }
 
 #capturesListButton > div::before {
@@ -106,4 +106,36 @@ html, body {
   width: 50px;
   height: 50px;
   background-color: #FAC823;
+}
+
+#galleryButton {
+  position: absolute;
+  left: 50%;
+  bottom: 40px;
+  transform: translate(calc(-50% - 90px), 0);
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+}
+
+#galleryButton::before, 
+#galleryButton::after {
+  content: '';
+  border-radius: 5px;
+  background-color: #FAC823;
+  position: absolute;
+}
+
+#galleryButton::before {
+  width: 40px;
+  height: 5px;
+  top: 50%;
+  transform: translate(0, -50%);
+}
+
+#galleryButton::after {
+  width: 5px;
+  height: 40px;
+  left: 50%;
+  transform: translate(-50%, 0);
 }

@@ -7,7 +7,7 @@ let captureID;
 let captureStart;
 let isRecording = false;
 let stream = [];
-let streamI;
+let streamI = 0;
 let output = [];
 let worker;
 let percentDownloaded = 0;
@@ -20,6 +20,8 @@ const maxErrorBubbles = 13;
 const errorBubbleSizes = [20, 50];
 const errorBubbleDurations = [120, 720];
 const errorMessage = 'An error has occurred';
+let fileInput;
+let noCaptures = false;
 
 const getWorker = path => {
   worker = new Worker(path);
@@ -71,7 +73,14 @@ const getDevices = () => {
         i++;
       }
     }
-    if (captures.length) captureID = 0;
+    if (captures.length) {
+      captureID = 0;
+    } else {
+      noCaptures = true;
+      const li = document.createElement('li');
+      li.innerText = 'No video inputs detected'
+      capturesList.appendChild(li);
+    }
   });
 }
 
@@ -137,9 +146,27 @@ const capturesListToggle = () => {
   }
 }
 
+const openFileInputDialog = () => {
+  capturesList.setAttribute('style', 'display: none;');
+  fileInput.elt.click();
+}
+
+const parseFile = ({type, data}) => {
+  if (type === 'image') {
+    loadImage(data, image => {
+      stream = [image];
+      buttonPressEnd();
+    });
+  }
+}
+
 function setup() {
   const canvas = createCanvas(windowWidth, windowHeight);
   canvas.elt.addEventListener('click', canvasPress);
+
+  fileInput = createFileInput(parseFile, false);
+  fileInput.hide();
+  fileInput.elt.setAttribute('accept', 'image/*');
 
   textFont('Helvetica');
   getWorker('/assets/js/worker.js');
@@ -150,6 +177,7 @@ function setup() {
   captureButton.addEventListener('mouseup', buttonPressEnd);
   captureButton.addEventListener('touchend', buttonPressEnd);
   capturesListButton.addEventListener('click', capturesListToggle);
+  galleryButton.addEventListener('click', openFileInputDialog);
 }
 
 function windowResized() {
@@ -232,14 +260,15 @@ function drawStatus() {
 function drawOutput() {
   let canvas;
 
-  if (captureID === undefined) return;
+  if (captureID === undefined && noCaptures === false) return;
   if (stream.length && !isRecording) {
-    canvas = stream[streamI]
+    canvas = stream[streamI];
     streamI += 1;
     if (streamI == stream.length) streamI = 0;
   } else {
     canvas = captures[captureID]
   }
+  if (canvas === undefined) return;
 
   let width, height;
   if (canvas.width >= canvas.height) {
