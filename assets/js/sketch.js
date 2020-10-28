@@ -28,6 +28,7 @@ const getWorker = path => {
   worker.onmessage = ({ data: { type, content } }) => {
     if (type === 'status') {
       status = content;
+      status.received = Date.now();
       lastAverage = status.average / 1000;
       drawStatus();
       if (debug) {
@@ -118,6 +119,7 @@ const buttonPressEnd = async () => {
     willTake: [floor(willTake / 60), willTake % 60],
     average: 0,
     found: 0,
+    received: Date.now(),
   };
   drawStatus();
   drawFunction = drawStatus;
@@ -242,19 +244,21 @@ function drawError() {
 }
 
 function drawStatus() {
-  // TODO Add realtime support
+  const past = (Date.now() - status.received) / 1000;
+  const tookSeconds = status.took[1] + Math.floor(past) % 60;
+  const tookMinutes = status.took[0] + Math.floor((status.took[1] + past) / 60);
   const smaller = min(windowWidth, windowHeight);
   
   stroke(250, 200, 35);
   strokeWeight(0.02*smaller);
   noFill();
-  arc(windowWidth*0.5, windowHeight*0.5, smaller * 0.5, smaller * 0.5, -PI/2, -PI/2 + (status.done/status.toDo)*TAU);
+  arc(windowWidth*0.5, windowHeight*0.5, smaller * 0.5, smaller * 0.5, -PI/2, -PI/2 + ((status.done + lastAverage !== 0 ? min(past / lastAverage, 1) : 0)/status.toDo)*TAU);
 
   noStroke()
   fill(0);
   textSize(map(smaller, 200, 1000, 12, 28));
   textAlign(CENTER, CENTER);
-  text(`${status.done}/${status.toDo}\n${nf(status.took[0], 2, 0)}:${nf(status.took[1], 2, 0)} < ${nf(status.willTake[0], 2, 0)}:${nf(status.willTake[1], 2, 0)}`, windowWidth*0.5, windowHeight*0.5);
+  text(`${status.done}/${status.toDo}\n${nf(tookMinutes, 2, 0)}:${nf(tookSeconds, 2, 0)} < ${nf(status.willTake[0], 2, 0)}:${nf(status.willTake[1], 2, 0)}`, windowWidth*0.5, windowHeight*0.5);
 }
 
 function drawOutput() {
