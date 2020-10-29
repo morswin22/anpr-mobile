@@ -1,6 +1,6 @@
 const clickTimeout = 250;
-const skipEvery = 5;
 const captures = [];
+let skipEvery;
 let debug = false;
 let drawFunction = drawLoading;
 let captureID;
@@ -91,7 +91,7 @@ const buttonPressStart = () => {
   output = [];
   captureStart = Date.now();
   isRecording = true;
-  capturesList.setAttribute('style', 'display: none;');
+  menu.setAttribute('style', 'display: none;');
 }
 
 const buttonPressEnd = async () => {
@@ -105,6 +105,7 @@ const buttonPressEnd = async () => {
     }
   }
 
+  skipEvery = parseInt(skipEveryInput.value);
   const imageBitmaps = [];
   for (const frame of stream.filter((_, i) => !(i % skipEvery))) {
     imageBitmaps.push(await createImageBitmap(frame.canvas, 0, 0, frame.width, frame.height));
@@ -128,8 +129,8 @@ const buttonPressEnd = async () => {
     type: 'arguments',
     content: {
       stream: imageBitmaps,
-      slideStep: 8,
-      maxZoomExp: 1,
+      slideStep: parseFloat(slideStepInput.value),
+      maxZoomExp: parseInt(maxZoomExpInput.value),
     }
   });
 }
@@ -137,19 +138,26 @@ const buttonPressEnd = async () => {
 const canvasPress = () => {
   stream = [];
   output = [];
-  capturesList.setAttribute('style', 'display: none;');
+  menu.setAttribute('style', 'display: none;');
 };
 
-const capturesListToggle = () => {
-  if (capturesList.getAttribute('style') && !isRecording) {
-    capturesList.removeAttribute('style');
+const menuToggle = () => {
+  if (menu.getAttribute('style') && !isRecording) {
+    menu.removeAttribute('style');
   } else {
-    capturesList.setAttribute('style', 'display: none;');
+    menu.setAttribute('style', 'display: none;');
   }
 }
 
+const showMenuItem = element => () => {
+  [...menu.children].slice(1).forEach(child => child.setAttribute('style', 'display: none'));
+  element.removeAttribute('style');
+}
+
+const updateParameterOutput = element => ({ target: { value } }) => element.innerText = value;
+
 const openFileInputDialog = () => {
-  capturesList.setAttribute('style', 'display: none;');
+  menu.setAttribute('style', 'display: none;');
   fileInput.elt.click();
 }
 
@@ -178,7 +186,12 @@ function setup() {
   captureButton.addEventListener('touchstart', buttonPressStart);
   captureButton.addEventListener('mouseup', buttonPressEnd);
   captureButton.addEventListener('touchend', buttonPressEnd);
-  capturesListButton.addEventListener('click', capturesListToggle);
+  menuButton.addEventListener('click', menuToggle);
+  showCapturesList.addEventListener('click', showMenuItem(capturesList));
+  showParametersList.addEventListener('click', showMenuItem(parametersList));
+  maxZoomExpInput.addEventListener('change', updateParameterOutput(maxZoomExpOutput));
+  slideStepInput.addEventListener('change', updateParameterOutput(slideStepOutput));
+  skipEveryInput.addEventListener('change', updateParameterOutput(skipEveryOutput));
   galleryButton.addEventListener('click', openFileInputDialog);
 }
 

@@ -5,9 +5,7 @@ html, body {
   font-family: 'Helvetica', sans-serif;
 }
 
-#capturesList {
-  margin: 0;
-  padding: 0;
+#menu {
   position: absolute;
   color: #000000;
   user-select: none;
@@ -16,6 +14,45 @@ html, body {
   top: 50%;
   transform: translate(-50%, -50%);
   background-color: #FAC823;
+}
+
+#menuController {
+  display: flex;
+  flex-direction: row;
+  border-bottom: 2px solid #BA951A;
+}
+
+#menuController > div {
+  padding: 20px;
+  width: 50%;
+  cursor: pointer;
+  text-align: center;
+}
+
+#menuController > div:nth-of-type(1) {
+  border-right: 2px solid #BA951A;
+}
+
+#menuController > div:hover {
+  background-color: #E0B31F;
+}
+
+#parametersList .group {
+  padding: 20px;
+  border-bottom: 2px solid #BA951A;
+}
+
+#parametersList .group:last-of-type {
+  border: 0;
+}
+
+#parametersList .group label {
+  display: block;
+}
+
+#capturesList {
+  margin: 0;
+  padding: 0;
   list-style: none;
 }
 
@@ -33,7 +70,7 @@ html, body {
   cursor: pointer;
 }
 
-#capturesListButton {
+#menuButton {
   cursor: pointer;
   position: absolute;
   width: 40px;
@@ -43,7 +80,7 @@ html, body {
   transform: translate(calc(-50% + 90px), 0);
 }
 
-#capturesListButton > div {
+#menuButton > div {
   position: absolute;
   width: 40px;
   height: 5px;
@@ -54,8 +91,8 @@ html, body {
   transform: translate(-50%, 0);
 }
 
-#capturesListButton > div::before,
-#capturesListButton > div::after {
+#menuButton > div::before,
+#menuButton > div::after {
   content: '';
   position: absolute;
   width: 40px;
@@ -67,11 +104,11 @@ html, body {
   background-color: #FAC823;
 }
 
-#capturesListButton > div::before {
+#menuButton > div::before {
   transform: translate(calc(-50%), -17px);
 }
 
-#capturesListButton > div::after {
+#menuButton > div::after {
   transform: translate(calc(-50%), 11px);
 }
 

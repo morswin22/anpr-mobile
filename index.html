@@ -12,9 +12,32 @@
 <body>
 
   <div id="ui" style="display: none;">
-    <ul id="capturesList" style="display: none;"></ul>
+    <div id="menu" style="display: none;">
+      <div id="menuController">
+        <div id="showCapturesList">Input</div>
+        <div id="showParametersList">Params</div>
+      </div>
+      <ul id="capturesList"></ul>
+      <div id="parametersList" style="display: none;">
+        <div class="group">
+          <label for="maxZoomExpInput">Maximal zoom</label>
+          <input type="range" min="0" max="9" step="1" value="2" id="maxZoomExpInput">
+          <span id="maxZoomExpOutput">2</span>
+        </div>
+        <div class="group">
+          <label for="slideStepInput">Step size</label>
+          <input type="range" min="0.5" max="16" step="0.5" value="8" id="slideStepInput">
+          <span id="slideStepOutput">8</span>
+        </div>
+        <div class="group">
+          <label for="skipEveryInput">Skip frames</label>
+          <input type="range" min="1" max="15" step="1" value="5" id="skipEveryInput">
+          <span id="skipEveryOutput">5</span>
+        </div>
+      </div>
+    </div>
     <div id="captureButton"></div>
-    <div id="capturesListButton">
+    <div id="menuButton">
       <div></div>
     </div>
     <div id="galleryButton"></div>
