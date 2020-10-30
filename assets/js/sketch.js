@@ -94,7 +94,7 @@ const buttonPressStart = () => {
   menu.setAttribute('style', 'display: none;');
 }
 
-const buttonPressEnd = async () => {
+const buttonPressEnd = () => {
   isRecording = false;
   const stop = Date.now();
   const duration = stop - captureStart;
@@ -106,32 +106,34 @@ const buttonPressEnd = async () => {
   }
 
   skipEvery = parseInt(skipEveryInput.value);
-  const imageBitmaps = [];
+  const pendingImageBitmaps = [];
   for (const frame of stream.filter((_, i) => !(i % skipEvery))) {
-    imageBitmaps.push(await createImageBitmap(frame.canvas, 0, 0, frame.width, frame.height));
+    pendingImageBitmaps.push(createImageBitmap(frame.canvas, 0, 0, frame.width, frame.height));
   }
 
-  const willTake = floor(lastAverage * imageBitmaps.length);
-  status = {
-    percent: 0,
-    done: 0,
-    toDo: imageBitmaps.length,
-    took: [0, 0],
-    willTake: [floor(willTake / 60), willTake % 60],
-    average: 0,
-    found: 0,
-    received: Date.now(),
-  };
-  drawStatus();
-  drawFunction = drawStatus;
-
-  worker.postMessage({
-    type: 'arguments',
-    content: {
-      stream: imageBitmaps,
-      slideStep: parseFloat(slideStepInput.value),
-      maxZoomExp: parseInt(maxZoomExpInput.value),
-    }
+  Promise.all(pendingImageBitmaps).then(imageBitmaps => {
+    const willTake = floor(lastAverage * imageBitmaps.length);
+    status = {
+      percent: 0,
+      done: 0,
+      toDo: imageBitmaps.length,
+      took: [0, 0],
+      willTake: [floor(willTake / 60), willTake % 60],
+      average: 0,
+      found: 0,
+      received: Date.now(),
+    };
+    drawStatus();
+    drawFunction = drawStatus;
+  
+    worker.postMessage({
+      type: 'arguments',
+      content: {
+        stream: imageBitmaps,
+        slideStep: parseFloat(slideStepInput.value),
+        maxZoomExp: parseInt(maxZoomExpInput.value),
+      }
+    });
   });
 }
 
