@@ -1,4 +1,4 @@
-const versionTag = `v0.1`;
+const versionTag = `v1.0`;
 
 self.addEventListener('fetch', event => {
   event.respondWith(
