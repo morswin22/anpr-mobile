@@ -1,5 +1,6 @@
 {
   "name": "Automatic Number-Plate Recognition",
+  "version": "1.0.0",
   "short_name": "ANPR",
   "theme_color": "#2a81ad",
   "background_color": "#e5e5e5",
